@@ -1,3 +1,5 @@
+<img src="/img/nfxi-ta-logo.png" alt="a logo featuring a bear on a red and gray landscape" width="200" height="200/>
+
 # nfxi-ta
 
 In this repository, you will see my practice solution that accomplishes 3 main tasks. The goal was to integrate with GCP (specifically the consumer Drive APIs) to evalute a source directory and copy the content to a destination.
