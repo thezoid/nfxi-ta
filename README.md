@@ -1,4 +1,4 @@
-<img src="/img/nfxi-ta-logo.png" alt="a logo featuring a bear on a red and gray landscape" width="200" height="200/>
+![a logo featuring a bear on a red and gray landscape](/img/nfxi-ta-logo256.png)
 
 # nfxi-ta
 
@@ -7,7 +7,10 @@ In this repository, you will see my practice solution that accomplishes 3 main t
 ## Setup
 
 ```shell
-     pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
+     pip3 install virtualenv
+     virtualenv nfxi-ta
+     source nfxi-ta/bin/activate
+     nfxi-ta/bin/pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
 ```
 
 ## Future improvements
