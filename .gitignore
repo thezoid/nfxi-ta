@@ -1,3 +1,11 @@
+data/*
+archive/*
+logs/*
+local/*
+*dev*
+
+## GH python below
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,0 +1,12 @@
+{
+  "app": {
+    "loggingLevel": "3",
+    "sourceFolderID": "",
+    "destinationFolderID": "",
+    "scopes": ["https://www.googleapis.com/auth/drive"]
+  },
+  "credentials": {
+    "clientID": "",
+    "clientSecret": ""
+  }
+}
