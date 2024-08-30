@@ -27,37 +27,39 @@ class tcolors:
 def writeLog(message, type, writeTofile=True,loggingLevel=2):
      if loggingLevel == 0:
           return
+     _scriptdir = os.path.dirname(os.path.realpath(__file__))
      if type.upper() == "ERROR" and loggingLevel >= 1:
-          print(tcolors.FAIL,f"!!![{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
+          print(tcolors.FAIL,f"[ERROR][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
           if writeTofile:
                _scriptdir = os.path.dirname(os.path.realpath(__file__))
                with open(os.path.join(_scriptdir,"logs",f"{datetime.datetime.today().strftime('%Y%B%d')}.log"),"a",encoding="utf-8") as logFile:
-                    logFile.write(f"!!![{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
+                    logFile.write(f"[ERROR]][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
      elif type.upper() == "WARNING" and loggingLevel >= 2:
-               print(tcolors.WARNING,f"![{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
+               print(tcolors.WARNING,f"[WARNING][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
                if writeTofile:
                     _scriptdir = os.path.dirname(os.path.realpath(__file__))
                     with open(os.path.join(_scriptdir,"logs",f"{datetime.datetime.today().strftime('%Y%B%d')}.log"),"a",encoding="utf-8") as logFile:
-                         logFile.write(f"![{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
+                         logFile.write(f"[WARNING][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
      elif type.upper() == "SUCCESS" and loggingLevel >= 2:
-          print(tcolors.OKGREEN,f"^[{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
+          print(tcolors.OKGREEN,f"[SUCCESS][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
           if writeTofile:
                _scriptdir = os.path.dirname(os.path.realpath(__file__))
                with open(os.path.join(_scriptdir,"logs",f"{datetime.datetime.today().strftime('%Y%B%d')}.log"),"a",encoding="utf-8") as logFile:
-                    logFile.write(f"*[{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
+                    logFile.write(f"[SUCCESS][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
      elif type.upper() == "INFO" and loggingLevel >= 3:
-          print(tcolors.WHITE,f"*[{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
+          print(tcolors.WHITE,f"[INFO][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
           if writeTofile:
                _scriptdir = os.path.dirname(os.path.realpath(__file__))
                with open(os.path.join(_scriptdir,"logs",f"{datetime.datetime.today().strftime('%Y%B%d')}.log"),"a",encoding="utf-8") as logFile:
-                    logFile.write(f"*[{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
-     elif type.upper() == "DEBUG" and loggingLevel >= 3:
-          print(tcolors.OKBLUE,f"?[{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
+                    logFile.write(f"[INFO][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
+     elif type.upper() == "DEBUG" and loggingLevel >= 4:
+          print(tcolors.OKBLUE,f"[DEBUG][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}",tcolors.ENDC)
           if writeTofile:
                _scriptdir = os.path.dirname(os.path.realpath(__file__))
                with open(os.path.join(_scriptdir,"logs",f"{datetime.datetime.today().strftime('%Y%B%d')}.log"),"a",encoding="utf-8") as logFile:
-                    logFile.write(f"*[{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
+                    logFile.write(f"[DEBUG][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
 
+#do a basic lookup of files in the specified folder
 def list_files_in_folder(service, folder_id, page_size=10):
     #build the query to search for files in the specified folder
     query = f"'{folder_id}' in parents"
@@ -76,6 +78,11 @@ def list_files_in_folder(service, folder_id, page_size=10):
     else:
         return items
     
+#extend the normal look up function to work recursively to all depths of the folder
+#service is the google api client object
+#folder_id is the google drive folder id to search
+#page_size is the number of results to return, helps with rate limiting
+#loggingLevel is the level of logging to use to pass through to writelog - allows for controlling the verbosity deeper in the code
 def list_files_in_folder_recursive(service, folder_id, page_size=10, loggingLevel=2):
      #build the query to search for files in the specified folder
      query = f"'{folder_id}' in parents"
@@ -95,22 +102,38 @@ def list_files_in_folder_recursive(service, folder_id, page_size=10, loggingLeve
      else:
           writeLog(f"{folder_id} had: ","debug",True,loggingLevel)
           writeLog((items),"debug",True,loggingLevel)
-          print(items)
-          #writeLog(f"found {len(items)} items in {folder_id}","info",True,loggingLevel)
           for item in items:
                writeLog("evaluating for deeper recurse","debug",True,loggingLevel)
                writeLog(item,"debug",True,loggingLevel)
-               print(item)
                if item["mimeType"] == "application/vnd.google-apps.folder":
                     returnItems.append(list_files_in_folder_recursive(service, item["id"]))
                else:
                     returnItems.append(item)
           writeLog("returning: ","debug",True,loggingLevel)
           writeLog(returnItems,"debug",True,loggingLevel)
-          print(returnItems)
           return returnItems
 
-        
+#recursively unwrap the results from the recursive lookup, faltten the output for easy size caluclations
+#results is expeted to be the unflattened list from the recursive lookup
+def unwrapRecurseLookupResults(results):
+     returnItems = []
+     for item in results:
+          if item:
+               # print(item)
+               if isinstance(item, dict):
+                    # print("dict")
+                    returnItems.append(item)
+               elif isinstance(item, list):
+                    # print("list")
+                    returnItems.extend(unwrapRecurseLookupResults(item)) #extend so we dont nest lists, not append
+               #elif isinstance(item, str):
+                    #print("str","we went too far unwrapping")
+               else:
+                    print("unprocessed type", type(item))
+          # else:
+          #      print("skip none type entry")
+     return returnItems
+
 #lets build one big block to handle http errors
 #error is the full error object returned fromHttpError
 def httpErrorHandler(error, loggingLevel=1):
@@ -150,16 +173,17 @@ def httpErrorHandler(error, loggingLevel=1):
           case 511:
                writeLog(f"Received 511 Network Authentication Required: {error}", "error", True, loggingLevel)
           case default:
-               print(f"An error occurred: {error}")
+               writeLog(f"An error occured but is missing a specific case: {error}", "error", True, loggingLevel)
 
 def main():
      #prep for nice console output
      os.system('color')
-     #vars
+     #dynamic path caching
      scriptdir = os.path.dirname(os.path.realpath(__file__))
      tokenPath = os.path.join(scriptdir,"data","token.json")
      clientSecertsPath = os.path.join(scriptdir,"local","credentials.json")
      # read ./settings.json
+     # !!! reset to read the default settings file instead of the development file !!!
      with open(os.path.join(scriptdir,"local","dev.settings.json")) as settingsFile:
           settings = json.load(settingsFile)
      # establish credentials and cache it locally to token.json
@@ -181,28 +205,40 @@ def main():
      #if we get good credentials, lets integrate and start to evalute the source
      try:
           service = build("drive", "v3", credentials=creds)
+          if settings["app"]["clearDestOnRun"]:
+               writeLog("clearing destination folder","info",True,settings["app"]["loggingLevel"])
           #1 - count files and folders in root of src
           writeLog("starting to count files in source root","info",True,settings["app"]["loggingLevel"])
           rootFiles = list_files_in_folder(service, settings["app"]["sourceFolderID"])
           if rootFiles != None:
+               writeLog("found the following data at the root of src","debug",True,settings["app"]["loggingLevel"])
                writeLog(rootFiles,"debug",True,settings["app"]["loggingLevel"])
                writeLog(f"there are {len(rootFiles)} files in the source root","success",True,settings["app"]["loggingLevel"])
                #2 - count files and folders in src recursively
                writeLog("starting to count files in source recursively","info",True,settings["app"]["loggingLevel"])
                recurseFiles = []
+               fileTreeDict = {}
+               #loop through each of these top level folders and recurse so we dont pull them again
                for item in rootFiles:
-                    recurseFiles.append(list_files_in_folder_recursive(service, item["id"],settings["app"]["loggingLevel"]))
+                    results = list_files_in_folder_recursive(service, item["id"],settings["app"]["loggingLevel"]) 
+                    recurseFiles.append(results)
+                    #intialize the key if it doesnt exist, then append the structured results (!!!don't flatten to preserve structure for file copying)
+                    fileTreeDict.setdefault(item["id"], []).append(results)
+               writeLog("found the following data recursing through the subfolders","debug",True,settings["app"]["loggingLevel"])
                writeLog(recurseFiles,"debug",True,settings["app"]["loggingLevel"])
-               writeLog(f"there are {len(recurseFiles)+len(rootFiles)} files in the source recursively","success",True,settings["app"]["loggingLevel"])
+               unwrappedrecurseFiles = unwrapRecurseLookupResults(recurseFiles)
+               writeLog("found the following data unwrapping the recursive lookup data","debug",True,settings["app"]["loggingLevel"])
+               writeLog(unwrappedrecurseFiles,"debug",True,settings["app"]["loggingLevel"])
+               writeLog(f"there are {len(unwrappedrecurseFiles)+len(rootFiles)} files in the source recursively","success",True,settings["app"]["loggingLevel"])
+               #3 - copy all the content from src to dest
+               writeLog("starting to copy all files from source to destination","info",True,settings["app"]["loggingLevel"])
           else:
                writeLog(f"failed to get files in source","error",True,settings["app"]["loggingLevel"])
      except HttpError as error:
           httpErrorHandler(error,settings["app"]["loggingLevel"])
  
-     #3 - copy all the content from src to dest
-     writeLog("starting to copy all files from source to destination","info",True,settings["app"]["loggingLevel"])
+    
 
 #main
 if __name__ == "__main__":
      main()
-

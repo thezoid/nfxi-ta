@@ -20,11 +20,11 @@ In this repository, you will see my practice solution that accomplishes 3 main t
 
 ## Customization
 
-| Key                 | Description                                                                                                                                      | Default                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| loggingLevel        | Set the level of logging in the script such that <br><ul><li>`0 = SILENT`</li><li>`1 = ERROR`</li><li>`2 = WARNING`</li><li>`3 = INFO`</li></ul> | 1                                     |
-| sourceFolderID      | The folder ID for the source directory                                                                                                           | Null                                  |
-| destinationFolderID | The folder ID for the destination directory                                                                                                      | Null                                  |
-| scopes              | An array of Google API scopes                                                                                                                    | https://www.googleapis.com/auth/drive |
-| clientID            |                                                                                                                                                  |                                       |
-| clientSecret        |                                                                                                                                                  |                                       |
+| Key                 | Description                                                                                                                                                                       | Default                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| loggingLevel        | Set the level of logging in the script such that <br><ul><li>`0 = SILENT`</li><li>`1 = ERROR`</li><li>`2 = WARNING and SUCCESS` </li><li>`3 = INFO`</li><li>`4 = DEBUG`</li></ul> | 1                                     |
+| sourceFolderID      | The folder ID for the source directory                                                                                                                                            | Null                                  |
+| destinationFolderID | The folder ID for the destination directory                                                                                                                                       | Null                                  |
+| scopes              | An array of Google API scopes                                                                                                                                                     | https://www.googleapis.com/auth/drive |
+| clientID            |                                                                                                                                                                                   |                                       |
+| clientSecret        |                                                                                                                                                                                   |                                       |
