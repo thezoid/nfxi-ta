@@ -13,6 +13,11 @@ In this repository, you will see my practice solution that accomplishes 3 main t
      nfxi-ta/bin/pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
 ```
 
+Follow the steps on [this](https://developers.google.com/workspace/guides/create-credentials) page to setup your authentication.
+
+You will need to setup the below scopes at a minimum (least privileged revision to come).
+![a picture showing the scopes needed to be defined on the google project oauth consent screen](/img/appScopes.png)
+
 ## Future improvements
 
 1. Offload secrets into .env from JSON

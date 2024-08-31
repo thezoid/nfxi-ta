@@ -4,6 +4,6 @@
     "sourceFolderID": "",
     "destinationFolderID": "",
     "scopes": ["https://www.googleapis.com/auth/drive"],
-    "clearDestOnRun": true
+    "clearDestOnRun": false
   }
 }
