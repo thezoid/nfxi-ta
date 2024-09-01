@@ -237,8 +237,23 @@ def httpErrorHandler(error, loggingLevel=1):
           case default:
                writeLog(f"An error occured but is missing a specific case: {error}", "error", True, loggingLevel)
 
+#helper func to fill in details of an object when we only have the ID
+def getObjectById(service, objectID,loggingLevel=2):
+     try:
+          file = service.files().get(
+               fileId=objectID, 
+               fields="id, name, mimeType, parents"
+          ).execute()
+          if 'parents' in file:
+               return {'id':file['id'],'name':file['name'],'mimeType':file['mimeType'],'parents':file['parents']}
+          else:
+               return {'id':file['id'],'name':file['name'],'mimeType':file['mimeType'],'parents':[]}
+     except HttpError as error:
+          httpErrorHandler(error,loggingLevel)
+          return {'id':objectID,'name':"",'mimeType':"",'parents':[]} 
+
 #do a basic lookup of files in the specified folder
-def listFilesInFolder(service, folderID, page_size=10,loggingLevel=2):
+def listFilesInFolder(service, folderID, pageSize=10,loggingLevel=2):
      #build the query to search for files in the specified folder
      query = f"'{folderID}' in parents"
      #execute the query
@@ -246,7 +261,7 @@ def listFilesInFolder(service, folderID, page_size=10,loggingLevel=2):
           service.files()
           .list(
                q=query, 
-               pageSize=page_size, 
+               pageSize=pageSize, 
                fields="nextPageToken, files(id, name,mimeType,parents)"
           )
           .execute()
@@ -255,7 +270,7 @@ def listFilesInFolder(service, folderID, page_size=10,loggingLevel=2):
      items = results.get("files", [])
      if items is None or len(items) == 0:
           writeLog(f"no items found in folder with id {folderID}","warning",True,loggingLevel)
-          return None
+          return None #[{'id':folderID,'name':"",'mimeType':"",'parents':[]}] #[getObjectById(service,folderID,loggingLevel)]
      else:
           return items
     
@@ -279,7 +294,7 @@ def listFilesInFolderRecursive(service, folderID, pageSize=10, loggingLevel=2):
      returnItems = []
      if items is None or len(items) == 0:
           writeLog(f"no items found in folder with id {folderID}","warning",True,loggingLevel)
-          return None
+          return None #[{'id':folderID,'name':None,'mimeType':None,'parents':None}] #[getObjectById(service,folderID,loggingLevel)] 
      else:
           writeLog(f"{folderID} had: ","debug",True,loggingLevel)
           writeLog((items),"debug",True,loggingLevel)
@@ -287,25 +302,43 @@ def listFilesInFolderRecursive(service, folderID, pageSize=10, loggingLevel=2):
                writeLog("evaluating for deeper recurse","debug",True,loggingLevel)
                writeLog(item,"debug",True,loggingLevel)
                if item["mimeType"] == "application/vnd.google-apps.folder":
-                    returnItems.append(listFilesInFolderRecursive(service, item["id"],pageSize,loggingLevel))
+                    returnItems.extend(listFilesInFolderRecursive(service, item["id"],pageSize,loggingLevel))
                else:
                     returnItems.append(item)
           writeLog("returning: ","debug",True,loggingLevel)
           writeLog(returnItems,"debug",True,loggingLevel)
           return returnItems
 
+def listFilesInFolderRecursiveV2(service, folderID, pageSize=10, loggingLevel=2):
+     files = listFilesInFolder(service, folderID, pageSize,loggingLevel)
+     results = []
+     if files is None or len(files) == 0 :
+          return None
+     else:
+          for file in files:
+               if file['mimeType'] == 'application/vnd.google-apps.folder':
+                    results.append(listFilesInFolderRecursiveV2(service, file['id'], pageSize,loggingLevel))
+               else:
+                    results.append(file)
+     return results
+
 #recursively unwrap the results from the recursive lookup, faltten the output for easy size caluclations
 #results is expeted to be the unflattened list from the recursive lookup
 def unwrapRecurseLookupResults(results, loggingLevel=1):
      returnItems = []
      for item in results:
-          if item:
-               if isinstance(item, dict):
-                    returnItems.append(item)
-               elif isinstance(item, list):
-                    returnItems.extend(unwrapRecurseLookupResults(item)) #extend so we dont nest lists, not append
-               else:
-                    print("unprocessed type", type(item))
+          writeLog(f"evaluating item in results during recursive unwrap\n\t{item}","debug",True,loggingLevel)
+          if isinstance(item, dict):
+               writeLog("found a dict type item in results - adding to returnItems","info",True,loggingLevel)
+               returnItems.append(item)
+          elif isinstance(item, list):
+               writeLog("found a list type item in results - recursing","info",True,loggingLevel)
+               returnItems.extend(unwrapRecurseLookupResults(item)) #extend so we dont nest lists, not append
+          # elif item is None:
+          #      writeLog("found a None type item in results - means its the empty folder","info",True,loggingLevel)
+          #      returnItems.append({'id':None,'name':None,'mimeType':None,'parents':None})
+          # else:
+          #      print("unprocessed type", type(item))
      return returnItems
 
 #copy a file from one folder to another; helper function for copyFolder (or for user elsewhere)
@@ -325,26 +358,30 @@ def copyFolder(service, sourceFolderId, destFolderId, loggingLevel=2):
      if files:
           writeLog(f"copying {len(files)} files from {sourceFolderId} to {destFolderId}","info",True,loggingLevel)
           for file in files:
-               if file['mimeType'] == 'application/vnd.google-apps.folder':
-                    writeLog(f"found nested folder!! creating folder {file['name']} in {destFolderId} and starting a copy","info",True,loggingLevel)
-                    newFolder = service.files().create(
-                         body={
-                              'name': file['name'],
-                              'mimeType': 'application/vnd.google-apps.folder',
-                              'parents': [destFolderId]
-                         }
-                    ).execute()
-                    filesCopied += copyFolder(service, file['id'], newFolder['id'],loggingLevel)
-               else:
-                    writeLog(f"copying file {file['name']} to {destFolderId}","info",True,loggingLevel)
-                    copyFile(service, file['id'], destFolderId,loggingLevel)
-                    filesCopied += 1
+               try:
+                    if file['mimeType'] == 'application/vnd.google-apps.folder':
+                         writeLog(f"found nested folder!! creating folder {file['name']} in {destFolderId} and starting a copy","info",True,loggingLevel)
+                         newFolder = service.files().create(
+                              body={
+                                   'name': file['name'],
+                                   'mimeType': 'application/vnd.google-apps.folder',
+                                   'parents': [destFolderId]
+                              }
+                         ).execute()
+                         filesCopied += copyFolder(service, file['id'], newFolder['id'],loggingLevel)
+                    else:
+                         writeLog(f"copying file {file['name']} to {destFolderId}","info",True,loggingLevel)
+                         copyFile(service, file['id'], destFolderId,loggingLevel)
+                         filesCopied += 1
+               except HttpError as error:
+                    httpErrorHandler(error,loggingLevel)
+                    continue
      return filesCopied
 
 #help us get a clean state when the debug flag clearDestOnRun is set to true
 # TODO: add some verification in here that clearDestOnRun is indeed set to true incase something happens in main() where it is called
 def clearFolder(service, folderID, loggingLevel=2):
-     files = listFilesInFolder(service, folderID,loggingLevel=loggingLevel)
+     files = listFilesInFolder(service, folderID,100,loggingLevel=loggingLevel)
      if files is not None:  # Check if files is not None
           writeLog(f"deleting {len(files)} files in folder {folderID}","warning",True,loggingLevel)
           for file in files:
@@ -372,7 +409,7 @@ def uploadFile(service,fileID,filePath,fileName,loggingLevel=2):
 
 #generate the final report of the  script run
 #uses basic formatting to generate a nice looking report, with dynamic alignment 
-def finalReporting(fileCounts, bufferSize=50):
+def finalReporting(fileCounts,includeNested=False,bufferSize=50):
      totalFiles = 0
      separatorLine = "=" * bufferSize
      reportString = f"\n{separatorLine}\n"
@@ -392,7 +429,8 @@ def finalReporting(fileCounts, bufferSize=50):
 
      reportString += f"{separatorLine}\n"
      reportString += f"Total root files: {fileCounts['Source Root'][0]}"+"\n"#.center(bufferSize) + "\n"
-     reportString += f"Total nested files: {totalFiles}"+"\n"#.center(bufferSize) + "\n"
+     if includeNested:
+          reportString += f"Total nested files: {totalFiles}"+"\n"#.center(bufferSize) + "\n"
      reportString += f"Total files: {totalFiles+fileCounts['Source Root'][0]}"+"\n"#.center(bufferSize) + "\n"
      reportString += f"{separatorLine}\n"
 
@@ -448,10 +486,11 @@ def main():
                recurseFiles = []
                #loop through each of these top level folders and recurse so we dont pull them again
                for item in rootFiles:
-                    results = listFilesInFolderRecursive(service, item["id"],loggingLevel=settings["app"]["loggingLevel"]) 
+                    results = listFilesInFolderRecursive(service, item["id"],pageSize=100,loggingLevel=settings["app"]["loggingLevel"]) 
                     recurseFiles.append(results)
                     if results != None:
-                         unwrappedrecurseFiles = unwrapRecurseLookupResults(results)
+                         unwrappedrecurseFiles = unwrapRecurseLookupResults(results,loggingLevel=settings["app"]["loggingLevel"])
+                         writeLog(f"item:{item}\nunwrapped results: {unwrappedrecurseFiles}","debug",True,settings["app"]["loggingLevel"])
                          unwrappedrecurseFilesCount = len(unwrappedrecurseFiles)
                     else:
                          unwrappedrecurseFilesCount = 0 #just itself, the empty folder
@@ -459,7 +498,7 @@ def main():
                     fileCounts.setdefault((item["name"]+":"+item["id"]), []).append(unwrappedrecurseFilesCount)
                writeLog("found the following data recursing through the subfolders","debug",True,settings["app"]["loggingLevel"])
                writeLog(recurseFiles,"debug",True,settings["app"]["loggingLevel"])
-               unwrappedrecurseFiles = unwrapRecurseLookupResults(recurseFiles)
+               unwrappedrecurseFiles = unwrapRecurseLookupResults(recurseFiles,loggingLevel=settings["app"]["loggingLevel"])
                writeLog("found the following data unwrapping the recursive lookup data","debug",True,settings["app"]["loggingLevel"])
                writeLog(unwrappedrecurseFiles,"debug",True,settings["app"]["loggingLevel"])
                writeLog(f"there are {len(unwrappedrecurseFiles)+len(rootFiles)} files in the source root recursively","success",True,settings["app"]["loggingLevel"])
@@ -471,7 +510,7 @@ def main():
                numCopied = copyFolder(service, settings["app"]["sourceFolderID"], settings["app"]["destinationFolderID"],settings["app"]["loggingLevel"])
                writeLog(f"finished copying all [{numCopied}] files from source to destination","info",True,settings["app"]["loggingLevel"])
                #Final - reporting
-               finalReport = finalReporting(fileCounts,bufferSize=100)
+               finalReport = finalReporting(fileCounts,True,bufferSize=100)
                writeLog("\n"+finalReport,"always",True,settings["app"]["loggingLevel"])
                #write the textual report for email/sending in some way for human consumption
                with open(finalOutputPath,"w") as reportFile:
@@ -525,8 +564,8 @@ def main2():
           service = build("drive", "v3", credentials=creds)
      except HttpError as error:
           httpErrorHandler(error,settings["app"]["loggingLevel"])
-
-     menu = "1.  generate a report that shows the number of files and folders in total at the root of the source folder\n2. Generate a report that shows the number of child objects (recursively)\n3. Copy the content (nested files/folders) of the source folder to the destination folder\n4. Run the full assessment\n0. Quit\n\nPlease select an option to run"
+     menu = "="*50+"\n"+f"Current source: https://drive.google.com/drive/folders/{settings['app']['sourceFolderID']}\nCurrent destination: https://drive.google.com/drive/folders/{settings['app']['destinationFolderID']}\nCurrent logging level (higher is more verbose): {settings['app']['loggingLevel']}\n"+"="*50+"\n"
+     menu += "1. Generate a report that shows the number of files and folders in total at the root of the source folder\n2. Generate a report that shows the number of child objects (recursively)\n3. Copy the content (nested files/folders) of the source folder to the destination folder\n4. Run the full assessment\n0. Quit\n\nPlease select an option to run: "
      userInput = -1
      while userInput != "0":
           userInput = input(menu)
@@ -542,17 +581,16 @@ def main2():
                          writeLog(f"there are {len(rootFiles)} files in the source root","success",True,settings["app"]["loggingLevel"])
                          fileCounts.setdefault("Source Root", []).append(len(rootFiles))
                          #Final - reporting
-                         finalReport = finalReporting(fileCounts,bufferSize=100)
-                         printTitleCard()
+                         finalReport = finalReporting(fileCounts,False,bufferSize=100)
                          writeLog("\n"+finalReport,"always",True,settings["app"]["loggingLevel"])
                          #write the textual report for email/sending in some way for human consumption
                          with open(finalOutputPath,"w") as reportFile:
                               reportFile.write(finalReport)
-                         uploadFile(service,settings["app"]["destinationFolderID"],finalOutputPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-rootReport.txt",settings["app"]["loggingLevel"])
+                         uploadFile(service,settings["app"]["destinationFolderID"],finalOutputPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-a#1-rootReport.txt",settings["app"]["loggingLevel"])
                          #write the counts to a json for further parsing in what would be an assumed consumer of this application
                          with open(finalJSONPath,"w") as reportFile:
                               reportFile.write(json.dumps(fileCounts))
-                         uploadFile(service,settings["app"]["destinationFolderID"],finalJSONPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-report.json",settings["app"]["loggingLevel"])
+                         uploadFile(service,settings["app"]["destinationFolderID"],finalJSONPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-a#1-report.json",settings["app"]["loggingLevel"])
                     else:
                          writeLog(f"failed to get files in source","warning",True,settings["app"]["loggingLevel"])
                case "2":
@@ -568,37 +606,37 @@ def main2():
                          recurseFiles = []
                          #loop through each of these top level folders and recurse so we dont pull them again
                          for item in rootFiles:
-                              results = listFilesInFolderRecursive(service, item["id"],loggingLevel=settings["app"]["loggingLevel"]) 
+                              results = listFilesInFolderRecursiveV2(service, item["id"],pageSize=100,loggingLevel=settings["app"]["loggingLevel"]) 
                               recurseFiles.append(results)
                               if results != None:
-                                   unwrappedrecurseFiles = unwrapRecurseLookupResults(results)
+                                   unwrappedrecurseFiles = unwrapRecurseLookupResults(results,loggingLevel=settings["app"]["loggingLevel"])
+                                   writeLog(f"item:{item}\nunwrapped results: {unwrappedrecurseFiles}","debug",True,settings["app"]["loggingLevel"])
                                    unwrappedrecurseFilesCount = len(unwrappedrecurseFiles)
                               else:
                                    unwrappedrecurseFilesCount = 0 #just itself, the empty folder
                               writeLog(f"there are {len(unwrappedrecurseFiles)} files in the folder {item['name']} [{item['id']}]","success",True,settings["app"]["loggingLevel"])
-                              fileCounts.setdefault(item["name"], []).append(unwrappedrecurseFilesCount)
+                              fileCounts.setdefault((item["name"]+":"+item["id"]), []).append(unwrappedrecurseFilesCount)
                          writeLog("found the following data recursing through the subfolders","debug",True,settings["app"]["loggingLevel"])
                          writeLog(recurseFiles,"debug",True,settings["app"]["loggingLevel"])
-                         unwrappedrecurseFiles = unwrapRecurseLookupResults(recurseFiles)
+                         unwrappedrecurseFiles = unwrapRecurseLookupResults(recurseFiles,loggingLevel=settings["app"]["loggingLevel"])
                          writeLog("found the following data unwrapping the recursive lookup data","debug",True,settings["app"]["loggingLevel"])
                          writeLog(unwrappedrecurseFiles,"debug",True,settings["app"]["loggingLevel"])
                          writeLog(f"there are {len(unwrappedrecurseFiles)+len(rootFiles)} files in the source root recursively","success",True,settings["app"]["loggingLevel"])
                          #Final - reporting
-                         finalReport = finalReporting(fileCounts)
-                         printTitleCard()
+                         finalReport = finalReporting(fileCounts,True,bufferSize=100)
                          writeLog("\n"+finalReport,"always",True,settings["app"]["loggingLevel"])
                          #write the textual report for email/sending in some way for human consumption
                          with open(finalOutputPath,"w") as reportFile:
                               reportFile.write(finalReport)
-                         uploadFile(service,settings["app"]["destinationFolderID"],finalOutputPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-recursiveReport.txt",settings["app"]["loggingLevel"])
+                         uploadFile(service,settings["app"]["destinationFolderID"],finalOutputPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-a#2-recursiveReport.txt",settings["app"]["loggingLevel"])
                          #write the counts to a json for further parsing in what would be an assumed consumer of this application
                          with open(finalJSONPath,"w") as reportFile:
                               reportFile.write(json.dumps(fileCounts))
-                         uploadFile(service,settings["app"]["destinationFolderID"],finalJSONPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-report.json",settings["app"]["loggingLevel"])
+                         uploadFile(service,settings["app"]["destinationFolderID"],finalJSONPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-a#2-report.json",settings["app"]["loggingLevel"])
                          #write the counts to a json for further parsing in what would be an assumed consumer of this application
                          with open(finalDATAPath,"w") as reportFile:
                               reportFile.write(json.dumps(unwrappedrecurseFiles))
-                         uploadFile(service,settings["app"]["destinationFolderID"],finalJSONPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-reportdata.json",settings["app"]["loggingLevel"])
+                         uploadFile(service,settings["app"]["destinationFolderID"],finalJSONPath,f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-a#2-reportdata.json",settings["app"]["loggingLevel"])
                     else:
                          writeLog(f"failed to get files in source","warning",True,settings["app"]["loggingLevel"])
                case "3":
@@ -607,8 +645,8 @@ def main2():
                     if settings["app"]["clearDestOnRun"]:
                          writeLog("clearing destination folder - set [clearDestOnRun] to [false] in settings.json to prevent this","warning",True,settings["app"]["loggingLevel"])
                          clearFolder(service, settings["app"]["destinationFolderID"],settings["app"]["loggingLevel"])
-                    copyFolder(service, settings["app"]["sourceFolderID"], settings["app"]["destinationFolderID"],settings["app"]["loggingLevel"])
-                    writeLog("finished copying all files from source to destination","info",True,settings["app"]["loggingLevel"])
+                    numCopied = copyFolder(service, settings["app"]["sourceFolderID"], settings["app"]["destinationFolderID"],settings["app"]["loggingLevel"])
+                    writeLog(f"finished copying all [{numCopied}] files from source to destination","info",True,settings["app"]["loggingLevel"])
                case "4":
                     main()
                case "0":
@@ -617,5 +655,6 @@ def main2():
                     writeLog("invalid selection, please try again","warning",True,settings["app"]["loggingLevel"])          
 
 if __name__ == "__main__":
-     main()
+     #main()
      #main2()
+     print(tcolors.FAIL,"this version of the script is deprecated - please run appV2.py instead".tcolors.ENDC)

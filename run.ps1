@@ -1,6 +1,7 @@
 try {
-     rm .\data\token.json 
+     rm .\data\*
+     rm .\logs\*
 }
 catch {}
 clear
-python .\app.py
+python .\appV2.py
