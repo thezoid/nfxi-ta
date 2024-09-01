@@ -445,7 +445,7 @@ def main():
      #dynamic path caching
      scriptdir = os.path.dirname(os.path.realpath(__file__))
      #load settings
-     with open(os.path.join(scriptdir,"local","dev.settings.json")) as settingsFile:
+     with open(os.path.join(scriptdir,"settings.json")) as settingsFile:
           settings = json.load(settingsFile)
      service = authenticate(settings['app']['scopes'],settings['app']['loggingLevel'])
      menu = [
@@ -465,18 +465,18 @@ def main():
           writeLog("\n".join(menu), "always", True, settings['app']['loggingLevel'])
           userInput = input("")
           match userInput:
-               case "1":
+               case "1":#1 - count files and folders in root of src
                     writeLog("generating report for root folder", "info", True, settings['app']['loggingLevel'])
                     folderStructure = getRootFilesAndFolders(service,settings['app']['sourceFolderID'],settings['app']['loggingLevel'])
                     report = finalReportRoot(service,folderStructure,settings['app']['destinationFolderID'],settings['app']['loggingLevel'])
                     writeLog(report, "always", True, settings['app']['loggingLevel'])
                     input(f"{tcolors.OKGREEN}Report generated, saved, and uploaded!\nPress enter to continue{tcolors.ENDC}")
-               case "2":
+               case "2":#2 - count files and folders in src recursively
                     writeLog("generating recursive report", "info", True, settings['app']['loggingLevel'])
                     report = finalReportRecurse(service,settings['app']['sourceFolderID'],settings['app']['destinationFolderID'],settings['app']['loggingLevel'])
                     writeLog(report, "always", True, settings['app']['loggingLevel'])
                     input(f"{tcolors.OKGREEN}Report generated, saved, and uploaded!\nPress enter to continue{tcolors.ENDC}")
-               case "3":
+               case "3":#3 - copy all the content from src to dest
                     writeLog("copying content from source to destination", "info", True, settings['app']['loggingLevel'])
                     if settings["app"]["clearDestOnRun"]:
                          writeLog("clearing destination folder - set [clearDestOnRun] to [false] in settings.json to prevent this","warning",True,settings["app"]["loggingLevel"])

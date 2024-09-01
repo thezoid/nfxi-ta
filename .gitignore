@@ -3,7 +3,7 @@ archive/*
 logs/*
 local/*
 *dev*
-
+settings.json
 ## GH python below
 
 # Byte-compiled / optimized / DLL files
