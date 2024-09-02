@@ -219,7 +219,8 @@ def authenticate(scopes,loggingLevel=2):
           else:
                writeLog("no refresh token found, requesting new ones", "warning", True, loggingLevel)
                flow = InstalledAppFlow.from_client_secrets_file(clientSecertsPath, scopes)
-               creds = flow.run_local_server(port=0)
+               #creds = flow.run_local_server(port=0)
+               creds = flow.run_console()
           with open(tokenPath, 'w') as token:
                writeLog(f"writing new token to file [{tokenPath}]", "info", True, loggingLevel)
                token.write(creds.to_json())
@@ -492,5 +493,4 @@ def main():
                     writeLog("Invalid input, please try again", "always", True, settings['app']['loggingLevel'])
 
 if __name__ == "__main__":
-     printTitleCard()
      main()
