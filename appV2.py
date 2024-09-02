@@ -218,9 +218,8 @@ def authenticate(scopes,loggingLevel=2):
                creds.refresh(Request())
           else:
                writeLog("no refresh token found, requesting new ones", "warning", True, loggingLevel)
-               flow = InstalledAppFlow.from_client_secrets_file(clientSecertsPath, scopes)
-               #creds = flow.run_local_server(port=0)
-               creds = flow.run_console()
+               flow = InstalledAppFlow.from_client_secrets_file(clientSecertsPath, scopes=scopes)
+               creds = flow.run_local_server(port=0)
           with open(tokenPath, 'w') as token:
                writeLog(f"writing new token to file [{tokenPath}]", "info", True, loggingLevel)
                token.write(creds.to_json())
