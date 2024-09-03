@@ -657,4 +657,4 @@ def main2():
 if __name__ == "__main__":
      #main()
      #main2()
-     print(tcolors.FAIL,"this version of the script is deprecated - please run appV2.py instead".tcolors.ENDC)
+     print(tcolors.FAIL,"this version of the script is deprecated - please run appV2.py instead",tcolors.ENDC)

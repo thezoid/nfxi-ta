@@ -70,99 +70,6 @@ def writeLog(message, type, writeTofile=True,loggingLevel=2):
                with open(os.path.join(_scriptdir,"logs",f"{datetime.datetime.today().strftime('%Y%B%d')}.log"),"a",encoding="utf-8") as logFile:
                     logFile.write(f"[DEBUG][{datetime.datetime.today().strftime('%Y%B%d@%H:%M:%S')}] {message}\n")
 
-def printTitleCard():
-     art = '''                           
-                         .:^~~!!!!~~^:.                         
-                    :^!?J5PGGGGGGGGGGGP5Y?!:.                   
-                .^7J55555555PGGGGGGGGGGGGGGGPJ!.                
-              :7J5555555555555PGGGGGGGGGGBBBBBBPJ~              
-            ^?Y5555555PP5555555YPGGBGGBBBBBGGGGGGG5!.           
-          .7YYYYJ!~~!!7J5PP55YJJY5PGBBBG5?7~~!7YGGGGY^          
-         !PP5YJJ:.:~!~~^~?7!~~!7?7!~!7?~:::^~^::5GPPPP7.        
-        7GGGGGGY^~7PBP!^::::::::..   ...:^JGG?~^?BGPGGGJ.       
-       !GGGGGGGG~~?G5!..::::::::.........:~YGJ~^PBGGGGGG?:.     
-      :PGGGGPPGBP~::. .....:::::.....  .::::^^^YBG555PGGG!..    
-      JGGGPP555PG^ ......:::::::... .^~^::::::^5GPYJJY5PG5^.    
-     .PGP55555557......:~JYY!:::...^Y55J!^:::::!GPYJJJJJY5!:.   
-     :YY5555555Y:....:^^^~?5~..  ..:J5J?77!^::^:YBP5JJJJY57^.   
-     .JJJY55555~ .:^~~^^^^^:        ^777777?!^^:~GGPP5Y5557^.   
-      ?YJJJYY5J.:^~~!7!~^^:..:~!!!^:^~7777??!~~~^7GP555555!^.   
-      ~YJJJJJYJ~^^^^~7?7!^.. J####G^^^!??JJ!~~~~!?PP55555J~^.   
-      .?YJYY55PGY7~^^~7777^..~5GGP?:^~?JJJ7~~~7YGGPPP5555!~:.   
-       :J555555GGG5?~^!7777!~!7JYJ?7!?JJJ?~~?5GBBGPPPPP57~^.    
-        ^YP5555PGGGGPY!77777!^^^!~~7JJ???7JPBBBBGPPPPGP?~^:.    
-         :JP5555GGGGGGG5J?7777Y555JJJ?JYPGBBGGGGPPPPP57~^:.     
-          .!YP55PGGGGGGGGPY?77JPP5??J5PBBBGGGGBGPPPPJ!~^:.      
-            :!Y5PGGGGGGGGGGG5J7YPJY5GBBBGGGGGBBGP5J!~^:.        
-              .~?5GGGGGGGGGGGGP55PGBBGGGGBBBBBGY?!~^:..         
-                .:!J5PGGGGGGGGGPGBBBBBBBBBGPY?!~^^:..           
-                   .:^!?JY5PPPPPGGGGPP5YJ?!~^^^:..              
-                       ..:^^~~!!!!!!~~^^^:::..                  
-                            .............                       
-    '''
-
-     title = "Google Drive Integration Practice"
-     author = "Author: Zoid"
-     socialUrls = "GitHub: github.com/thezoid | Twitter: @zoid__"
-     description = (
-          "1: Report the total number of files and folders in the root of a given source Drive folder (by ID)\n"
-          "2: Report the number of child objects (recurisvely) for each top-level folder in the source Drive folder\n"
-          "3: Copy the content of the source Drive folder to a destination Drive folder, preserving the folder structure\n"
-     )
-
-     #split the ASCII art into lines and determine the width
-     artLines = art.splitlines()
-     artWidth = max(len(line) for line in artLines)
-
-     #get the section line buffers
-     sectionBuffer = max(len(line) for line in [title, author, socialUrls])
-     #define the text lines
-     textLines = [
-          "",
-          title,
-          "-" * sectionBuffer, #len(title),
-          author,
-          "-" * sectionBuffer,#len(author),
-          socialUrls,
-          "-" * sectionBuffer,#len(socialUrls),
-          description.split("\n")[0], #TODO: do this dynamically, not hardcoded
-          description.split("\n")[1],
-          description.split("\n")[2],
-          ""
-     ]
-
-    # Ensure `textLines` has the same number of lines as `artLines`
-     while len(textLines) < len(artLines):
-          textLines.append("")
-
-     # Calculate the max text width
-     textWidth = max(len(line) for line in textLines)
-
-     # Calculate total width for borders, considering the art width and text width
-     totalWidth = artWidth + textWidth + 8  # 4 spaces padding on each side
-
-     # Create the top and bottom borders
-     border = "=" * totalWidth
-
-     # Prepare each text line to be evenly spaced from the art
-     spacedTextLines = []
-     for i, line in enumerate(textLines):
-          if i < len(artLines):
-               padding = " " * (artWidth - len(artLines[i]) + 4)  # 4 spaces gap
-               spacedTextLines.append(padding + line.ljust(textWidth))
-          else:
-               spacedTextLines.append(" " * (artWidth + 4) + line.ljust(textWidth))
-
-     # Merge the art and the text lines
-     finalOutput = "\n".join(
-          [artLines[i] + spacedTextLines[i] for i in range(len(artLines))]
-     )
-
-     # Print the final title card with borders
-     print(tcolors.OKGREEN,f"\n{border}")
-     print(finalOutput)
-     print(f"{border}\n",tcolors.ENDC)
-
 #lets build one big block to handle http errors
 #error is the full error object returned fromHttpError
 def httpErrorHandler(error, loggingLevel=1):
@@ -204,25 +111,37 @@ def httpErrorHandler(error, loggingLevel=1):
           case _:
                writeLog(f"An error occured but is missing a specific case: {error}", "error", True, loggingLevel)
 
+#attempt to authenticate the user with the provided scopes
+#errors when the app credentials json is missing or an interactive browser cannot be invoked (e.g. headless server)
 def authenticate(scopes,loggingLevel=2):
      creds = None
      tokenPath = os.path.join(os.path.dirname(os.path.realpath(__file__)),"data","token.json")
      clientSecertsPath = os.path.join(os.path.dirname(os.path.realpath(__file__)),"local","credentials.json")
      writeLog("attempting to authenticate", "info", True, loggingLevel)
+     #if the token file exists, delete it to force a new token
      if os.path.exists(tokenPath):
-          creds = Credentials.from_authorized_user_file(tokenPath)
+          os.remove(tokenPath) #get around google not returning a refresh_token in our token.json - otherwise we'd use the existing token
+          #creds = Credentials.from_authorized_user_file(tokenPath)
      
-     if not creds or not creds.valid:
-          writeLog("no valid credentials found, requesting new ones", "warning", True, loggingLevel)
-          if creds and creds.expired and creds.refresh_token:
-               creds.refresh(Request())
-          else:
-               writeLog("no refresh token found, requesting new ones", "warning", True, loggingLevel)
-               flow = InstalledAppFlow.from_client_secrets_file(clientSecertsPath, scopes=scopes)
-               creds = flow.run_local_server(port=0)
-          with open(tokenPath, 'w') as token:
-               writeLog(f"writing new token to file [{tokenPath}]", "info", True, loggingLevel)
-               token.write(creds.to_json())
+     #make sure a the app creds are present
+     if not os.path.exists(clientSecertsPath):
+          writeLog(f"credential file is missing! please generate a credential related to a Google project before continuing and place it at {clientSecertsPath}", "error", True, loggingLevel)
+          return
+
+     
+     #if not creds or not creds.valid: #no longer needed - keeping in case we need to revert
+     #writeLog("no valid credentials found, requesting new ones", "warning", True, loggingLevel)
+     # if creds and creds.expired and creds.refresh_token: #no longer needed - keeping in case we need to revert
+     #      creds.refresh(Request())
+     # else:
+     #writeLog("no refresh token found, requesting new ones", "warning", True, loggingLevel)
+     #request
+     writeLog("requesting new auth token", "info", True, loggingLevel)
+     flow = InstalledAppFlow.from_client_secrets_file(clientSecertsPath, scopes=scopes)
+     creds = flow.run_local_server(port=0)
+     with open(tokenPath, 'w') as token:
+          writeLog(f"writing new token to file [{tokenPath}]", "info", True, loggingLevel)
+          token.write(creds.to_json())
 
      service = build('drive', 'v3', credentials=creds)
      return service
@@ -232,6 +151,7 @@ def authenticate(scopes,loggingLevel=2):
 def listFilesInFolder(service,folderID,loggingLevel=2):
      results = []
      pageT = None
+     #keep collecting pages until we run out
      while True:
           writeLog(f"getting page {pageT} of folder {folderID}", "debug", True, loggingLevel)
           response = service.files().list(
@@ -240,14 +160,17 @@ def listFilesInFolder(service,folderID,loggingLevel=2):
                fields='nextPageToken, files(id, name, mimeType,parents)',
                pageToken=pageT
           ).execute()
+          #add the files to the results (flat so we can process better down the line)
           results.extend(response.get('files', []))
           pageT = response.get('nextPageToken')
+          #no more pages, break the loop
           if pageT is None:
                writeLog(f"no next page - done!", "debug", True, loggingLevel)
                break
      writeLog(f"found {len(results)} items in folder {folderID}", "info", True, loggingLevel)
      return results
 
+#recursively count through the folders to find the number of child objects and nested folders
 def countChildObjects(service,folderID,loggingLevel=2):
      childFiles = listFilesInFolder(service,folderID) #get all the files in the folder
      totalFiles = len(childFiles) #count the files in the folder
@@ -278,7 +201,7 @@ def countChildObjects(service,folderID,loggingLevel=2):
                })
      return totalFiles, nestedFolders, folderStructure
 
-#prepare the final report for the 
+#prepare the final report for the recursive lookup of the nested folders and files
 def finalReportRecurse(service,sourceFolderID,destinationFolderID,loggingLevel=2,bufferSize=80):
      separatorLine = "=" * bufferSize
      report = [
@@ -287,28 +210,31 @@ def finalReportRecurse(service,sourceFolderID,destinationFolderID,loggingLevel=2
           f"{separatorLine}"
      ]
      totalNestedFolders=0
+     #get the initial folders in the source folder
      topLevelFolders = listFilesInFolder(service,sourceFolderID)
-     folderStructure = []
+     #folderStructure = []
+     #go through each folder and kick of the recursive check from countChildObjects
      for folder in topLevelFolders:
           if folder['mimeType'] == "application/vnd.google-apps.folder":
                totalFiles,nestedFolders,structure = countChildObjects(service, folder['id'],loggingLevel)
                report.append(f"[{folder['name']}: {folder['id']}] had [{totalFiles}] items, including [{nestedFolders}] nested folders.")
                totalNestedFolders += nestedFolders
-               folderStructure.append({
-                    "name": folder['name'],
-                    "id": folder['id'],
-                    "mimeType": folder['mimeType'],
-                    "parents": folder['parents'],
-                    "children": structure
-               })
+               # folderStructure.append({
+               #      "name": folder['name'],
+               #      "id": folder['id'],
+               #      "mimeType": folder['mimeType'],
+               #      "parents": folder['parents'],
+               #      "children": structure
+               # })
      totalFilesInRoot,_,rootStructure  = countChildObjects(service,sourceFolderID)
      #poke the source back at the start of the structure
-     folderStructure.insert(0, {
-          'name': 'Source Root',
-          'id': sourceFolderID,
-          'mimeType': 'application/vnd.google-apps.folder',
-          'children': rootStructure
-     })
+     # folderStructure.insert(0, {
+     #      'name': 'Source Root',
+     #      'id': sourceFolderID,
+     #      'mimeType': 'application/vnd.google-apps.folder',
+     #      'children': rootStructure
+     # })
+     #wrap the file structure map into a source based signifier
      reportStructure = {
           'name': 'Source Root',
           'id': sourceFolderID,
@@ -319,6 +245,7 @@ def finalReportRecurse(service,sourceFolderID,destinationFolderID,loggingLevel=2
      report.append(f"Total nested folders in source folder: {totalNestedFolders}")
      report.append(f"Total files in source folder including all nested items: {totalFilesInRoot}")
      report.append(f"{separatorLine}")
+     #write to a file and upload to the destination folder
      #structure json write and upload
      reportName = f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-a#2-fileStructureReport.json"
      reportPath = os.path.join(os.path.dirname(os.path.realpath(__file__)),"data",reportName)
@@ -326,6 +253,7 @@ def finalReportRecurse(service,sourceFolderID,destinationFolderID,loggingLevel=2
           json.dump(reportStructure, jsonFile, indent=4)
      uploadFile(service,destinationFolderID,reportPath,reportName,loggingLevel)
      #human readable report write and upload
+     #TODO: ship  JSON to next step of the process instead of writing to a file
      reportName = f"{datetime.datetime.today().strftime('%Y%B%d@%H_%M_%S')}-a#2-recurisveLookup.txt"
      reportPath = os.path.join(os.path.dirname(os.path.realpath(__file__)),"data",reportName)
      with open(reportPath, "w") as file:
@@ -335,8 +263,11 @@ def finalReportRecurse(service,sourceFolderID,destinationFolderID,loggingLevel=2
      return "\n".join(report)
 
 #for a#1 - we just need the root folders, not the recursion in the other functions
+#lets reduce how we look at the source folder
 def getRootFilesAndFolders(service, sourceFolderId,loggingLevel=2):
+     #get the folders
      files = listFilesInFolder(service, sourceFolderId,loggingLevel)
+     #get the file structure for reporting
      structure = []
      for file in files:
           structure.append({
@@ -345,7 +276,7 @@ def getRootFilesAndFolders(service, sourceFolderId,loggingLevel=2):
                "mimeType": file['mimeType'],
                "parents": file['parents']
           })
-
+     #wrap the file structure map into a source based signifier
      rootStructure = {
           'name': 'Source Root',
           'id': sourceFolderId,
@@ -354,6 +285,7 @@ def getRootFilesAndFolders(service, sourceFolderId,loggingLevel=2):
     }
      return rootStructure
 
+#build a report for a#1 and upload it to the destination folder
 def finalReportRoot(service,results,destinationFolderID,loggingLevel=2,bufferSize=80):
      separatorLine = "=" * bufferSize
      report = [
@@ -363,7 +295,7 @@ def finalReportRoot(service,results,destinationFolderID,loggingLevel=2,bufferSiz
      ]
      for i in range(len(results['children'])):
           item = results['children'][i]
-          report.append(f"{i}. [{item['name']}: {item['id']}]")
+          report.append(f"{i+1}. [{item['name']}: {item['id']}]")
      report.append(f"{separatorLine}")
      report.append(f"Total nested folders in source folder: {len(results['children'])}")
      report.append(f"{separatorLine}")
@@ -383,6 +315,7 @@ def finalReportRoot(service,results,destinationFolderID,loggingLevel=2,bufferSiz
 
      return "\n".join(report)
 
+#a simple helper script to help upload files to the drive
 def uploadFile(service,fileID,filePath,fileName,loggingLevel=2):
      fileMetadata = {
           'name': fileName,
@@ -410,12 +343,16 @@ def clearDestinationFolder(service, destinationFolderId,loggingLevel=2):
                httpErrorHandler(error,loggingLevel)
      writeLog(f"destination folder {destinationFolderId} is now empty - {len(files)} items removed", "success", True, loggingLevel)
 
+#a helper function to copy a file or folder from the source to the destination
+#this function will recurse on folders, preserving file structure
 def copyItem(service,file,destinationFolderID,loggingLevel=2):
-     filesCopied = 0
+     itemsCopied = 0
      fileProperties = {
           'name': file['name'],
           'parents': [destinationFolderID]
      }
+     #folder found, make it in the correct are, preserving structure
+     #recurse on the folder's contents to copy everything
      if file['mimeType'] == 'application/vnd.google-apps.folder':
           writeLog(f"creating folder {file['name']} in destination folder", "info", True, loggingLevel)
           newFolder = service.files().create(
@@ -427,16 +364,17 @@ def copyItem(service,file,destinationFolderID,loggingLevel=2):
           ).execute()
           sourcefiles = listFilesInFolder(service, file['id'],loggingLevel)
           writeLog(f"copying {len(sourcefiles)} files to {destinationFolderID}","info",True,loggingLevel)
+          itemsCopied += 1
           for file in sourcefiles:
-               filesCopied += copyItem(service,file,newFolder['id'],loggingLevel)
+               itemsCopied += copyItem(service,file,newFolder['id'],loggingLevel)
      else:
           writeLog(f"copying file {file['name']} to {destinationFolderID}","info",True,loggingLevel)
           service.files().copy(
                fileId=file['id'], 
                body=fileProperties
           ).execute()
-          filesCopied += 1
-     return filesCopied
+          itemsCopied += 1
+     return itemsCopied
           
 
 def main():
@@ -447,45 +385,70 @@ def main():
      #load settings
      with open(os.path.join(scriptdir,"settings.json")) as settingsFile:
           settings = json.load(settingsFile)
+     #make sure all the folders we need are present
+     if not os.path.exists(os.path.join(scriptdir,"logs")):
+          os.makedirs(os.path.join(scriptdir,"logs"))
+          writeLog("logs folder wasn't detected and has been created", "warning", True, settings['app']['loggingLevel'])
+     if not os.path.exists(os.path.join(scriptdir,"data")):
+          os.makedirs(os.path.join(scriptdir,"data"))
+          writeLog("data folder wasn't detected and has been created", "warning", True, settings['app']['loggingLevel'])
+     if not os.path.exists(os.path.join(scriptdir,"local")):
+          os.makedirs(os.path.join(scriptdir,"local"))
+          writeLog("local folder wasn't detected and has been created - please place your credentials.json file in this folder before running again", "error", True, settings['app']['loggingLevel'])
+          return
+     #authenticate the user on google
      service = authenticate(settings['app']['scopes'],settings['app']['loggingLevel'])
+     if service is None:
+          writeLog("failed to authenticate, exiting", "error", True, settings['app']['loggingLevel'])
+          return
      menu = [
+          f"{tcolors.OKCYAN}",
           "\n"+"="*50,
           f"Current source: https://drive.google.com/drive/folders/{settings['app']['sourceFolderID']}",
-          f"Current logging level (higher is more verbose): {settings['app']['loggingLevel']}"
+          f"Current destination: https://drive.google.com/drive/folders/{settings['app']['destinationFolderID']}",
+          f"Current logging level: (higher is more verbose): {settings['app']['loggingLevel']}"
           "\n"+"="*50,
           "1. Generate a report that shows the number of files and folders in total at the root of the source folder",
           "2. Generate a report that shows the number of child objects (recursively)",
           "3. Copy the content (nested files/folders) of the source folder to the destination folder",
           ""
           "0. Quit",
-          "Please select an option to run:"
+          "Please select an option to run:",
+          f"{tcolors.ENDC}"
      ]
      userInput = -1
      while userInput != "0":
-          writeLog("\n".join(menu), "always", True, settings['app']['loggingLevel'])
-          userInput = input("")
+          #writeLog("\n".join(menu), "always", True, settings['app']['loggingLevel'])
+          userInput = input("\n".join(menu))
+          writeLog(f"selected option {userInput}", "info", True, settings['app']['loggingLevel'])
           match userInput:
                case "1":#1 - count files and folders in root of src
                     writeLog("generating report for root folder", "info", True, settings['app']['loggingLevel'])
                     folderStructure = getRootFilesAndFolders(service,settings['app']['sourceFolderID'],settings['app']['loggingLevel'])
                     report = finalReportRoot(service,folderStructure,settings['app']['destinationFolderID'],settings['app']['loggingLevel'])
-                    writeLog(report, "always", True, settings['app']['loggingLevel'])
+                    #writeLog(report, "always", True, settings['app']['loggingLevel'])
+                    print(tcolors.OKCYAN,report,tcolors.ENDC)
                     input(f"{tcolors.OKGREEN}Report generated, saved, and uploaded!\nPress enter to continue{tcolors.ENDC}")
                case "2":#2 - count files and folders in src recursively
                     writeLog("generating recursive report", "info", True, settings['app']['loggingLevel'])
                     report = finalReportRecurse(service,settings['app']['sourceFolderID'],settings['app']['destinationFolderID'],settings['app']['loggingLevel'])
-                    writeLog(report, "always", True, settings['app']['loggingLevel'])
+                    #writeLog(report, "always", True, settings['app']['loggingLevel'])
+                    print(tcolors.OKCYAN,report,tcolors.ENDC)
                     input(f"{tcolors.OKGREEN}Report generated, saved, and uploaded!\nPress enter to continue{tcolors.ENDC}")
                case "3":#3 - copy all the content from src to dest
                     writeLog("copying content from source to destination", "info", True, settings['app']['loggingLevel'])
+                    #check if we flagged to clear the destination on the next copy run 
                     if settings["app"]["clearDestOnRun"]:
                          writeLog("clearing destination folder - set [clearDestOnRun] to [false] in settings.json to prevent this","warning",True,settings["app"]["loggingLevel"])
                          clearDestinationFolder(service,settings['app']['destinationFolderID'],settings['app']['loggingLevel'])
+                    #get the basefiles in the source
                     files = listFilesInFolder(service, settings['app']['sourceFolderID'],settings['app']['loggingLevel'])
+                    #go through all the root folders and files and copy them to the destination
                     copies = 0
                     for file in files:
-                         copies += copyItem(service,file,settings['app']['destinationFolderID'],settings['app']['loggingLevel'])
-                    #writeLog(f"copied {copies} items from source to destination", "success", True, settings['app']['loggingLevel'])
+                         copies = copyItem(service,file,settings['app']['destinationFolderID'],settings['app']['loggingLevel'])
+                    writeLog(f"copied {copies} items from source [{settings['app']['sourceFolderID']}] to destination [{settings['app']['destinationFolderID']}]", "success", True, settings['app']['loggingLevel'])
+                    input(f"{tcolors.OKGREEN}Files copied!\nPress enter to continue{tcolors.ENDC}")
                case "0":
                     writeLog("Quitting", "info", True, settings['app']['loggingLevel'])
                case _:
